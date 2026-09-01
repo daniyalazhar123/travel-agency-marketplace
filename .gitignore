@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.*.local
+.env.backup
+*.env
+!example.env
+
+# Python virtual environments
+venv/
+backend/venv/
+.venv/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Agent / tooling config
+.claude/
+.opencode/
+.freebuff/
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Secrets
+api keys.txt
+*.txt.local
+
+# Misc
+components.json.bak

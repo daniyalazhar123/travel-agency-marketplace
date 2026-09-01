@@ -1,0 +1,217 @@
+"use client";
+
+import Link from "next/link";
+import { Mail, MapPin, Phone, ArrowRight, Globe, MessageSquare, Users, Send, Monitor } from "lucide-react";
+import { type TenantConfig, type SocialLink } from "@/lib/tenant/config";
+
+interface FooterProps {
+  tenant: TenantConfig;
+  currentTenantSlug: string;
+}
+
+const defaultSocialLinks: SocialLink[] = [
+  { platform: "instagram", url: "#", label: "Instagram" },
+  { platform: "facebook", url: "#", label: "Facebook" },
+  { platform: "twitter", url: "#", label: "Twitter" },
+  { platform: "youtube", url: "#", label: "YouTube" },
+];
+
+const socialIcons: Record<string, React.ReactNode> = {
+  instagram: <MessageSquare className="w-5 h-5" aria-hidden="true" />,
+  facebook: <Users className="w-5 h-5" aria-hidden="true" />,
+  twitter: <Send className="w-5 h-5" aria-hidden="true" />,
+  youtube: <Monitor className="w-5 h-5" aria-hidden="true" />,
+  linkedin: <Globe className="w-5 h-5" aria-hidden="true" />,
+  pinterest: <Globe className="w-5 h-5" aria-hidden="true" />,
+  default: <Globe className="w-5 h-5" aria-hidden="true" />,
+};
+
+const getSocialIcon = (platform: string) => {
+  return socialIcons[platform] || socialIcons.default;
+};
+
+const navigationSections = {
+  explore: [
+    { label: "All Destinations", href: "/explore" },
+    { label: "Experiences", href: "/experiences" },
+    { label: "Featured Journeys", href: "/journeys" },
+    { label: "Travel Guides", href: "/guides" },
+    { label: "New Openings", href: "/new" },
+  ],
+  destinations: [
+    { label: "Europe", href: "/destinations/europe" },
+    { label: "Asia Pacific", href: "/destinations/asia" },
+    { label: "Americas", href: "/destinations/americas" },
+    { label: "Africa & Middle East", href: "/destinations/africa" },
+    { label: "Private Islands", href: "/destinations/islands" },
+  ],
+  company: [
+    { label: "About Us", href: "/about" },
+    { label: "Our Philosophy", href: "/philosophy" },
+    { label: "Sustainability", href: "/sustainability" },
+    { label: "Careers", href: "/careers" },
+    { label: "Press", href: "/press" },
+  ],
+  support: [
+    { label: "Contact Us", href: "/contact" },
+    { label: "FAQ", href: "/faq" },
+    { label: "Travel Insurance", href: "/insurance" },
+    { label: "Booking Terms", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy" },
+  ],
+};
+
+export function Footer({ tenant, currentTenantSlug }: FooterProps) {
+  const socialLinks = tenant.socialLinks?.length ? tenant.socialLinks : defaultSocialLinks;
+  const contact = tenant.contact || {};
+
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <footer className="bg-primary text-on-primary" role="contentinfo" aria-label="Site footer">
+      <div className="container-page py-16 lg:py-24">
+        <div className="grid gap-12 lg:grid-cols-2 xl:grid-cols-5 mb-16 lg:mb-20">
+          <div className="xl:col-span-2 lg:col-span-2">
+            <Link href={`/${currentTenantSlug}`} className="block mb-6" aria-label={`${tenant.name} - Home`}>
+              <span className="text-display text-2xl font-medium tracking-tight text-white">
+                {tenant.name}
+              </span>
+            </Link>
+            <p className="text-white/70 text-base mb-8 max-w-xs lg:max-w-sm leading-relaxed">
+              {tenant.description || "Curating extraordinary journeys for the discerning traveler since our founding. Experience the world differently."}
+            </p>
+            {contact.email && (
+              <a
+                href={`mailto:${contact.email}`}
+                className="flex items-center gap-3 text-white/70 hover:text-white transition-colors mb-3"
+              >
+                <Mail className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+                <span>{contact.email}</span>
+              </a>
+            )}
+            {contact.phone && (
+              <a
+                href={`tel:${contact.phone}`}
+                className="flex items-center gap-3 text-white/70 hover:text-white transition-colors mb-3"
+              >
+                <Phone className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+                <span>{contact.phone}</span>
+              </a>
+            )}
+            {contact.address && (
+              <address className="flex items-start gap-3 text-white/70 not-italic max-w-xs">
+                <MapPin className="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                <span>{contact.address}</span>
+              </address>
+            )}
+          </div>
+
+          <nav aria-label="Explore">
+            <h3 className="label text-accent mb-4 uppercase tracking-widest">Explore</h3>
+            <ul className="space-y-3" role="list">
+              {navigationSections.explore.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={`/${currentTenantSlug}${item.href}`}
+                    className="text-white/70 hover:text-white transition-colors text-sm"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Destinations">
+            <h3 className="label text-accent mb-4 uppercase tracking-widest">Destinations</h3>
+            <ul className="space-y-3" role="list">
+              {navigationSections.destinations.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={`/${currentTenantSlug}${item.href}`}
+                    className="text-white/70 hover:text-white transition-colors text-sm"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <nav aria-label="Company">
+            <h3 className="label text-accent mb-4 uppercase tracking-widest">Company</h3>
+            <ul className="space-y-3" role="list">
+              {navigationSections.company.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={`/${currentTenantSlug}${item.href}`}
+                    className="text-white/70 hover:text-white transition-colors text-sm"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+
+        <div className="pt-8 lg:pt-12 border-t border-white/10">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+            <p className="text-white/50 text-sm">
+              © {currentYear} {tenant.name}. All rights reserved.
+            </p>
+
+            <div className="flex items-center gap-6">
+              <nav aria-label="Social media" className="flex items-center gap-4">
+                {socialLinks.map((social) => (
+                  <a
+                    key={social.platform}
+                    href={social.url}
+                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all duration-200"
+                    aria-label={social.label || social.platform}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {getSocialIcon(social.platform)}
+                  </a>
+                ))}
+              </nav>
+
+              <Link
+                href={`/${currentTenantSlug}/newsletter`}
+                className="btn-ghost text-white/70 hover:text-white border-white/20 hover:border-white/30 px-6 py-2 text-sm hidden sm:inline-flex"
+              >
+                <Mail className="w-4 h-4 mr-2" aria-hidden="true" />
+                Newsletter
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-8 lg:mt-12 pt-8 border-t border-white/10">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <nav aria-label="Legal" className="flex flex-wrap items-center justify-center sm:justify-start gap-4 sm:gap-6">
+                <Link href={`/${currentTenantSlug}/privacy`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
+                  Privacy Policy
+                </Link>
+                <Link href={`/${currentTenantSlug}/terms`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
+                  Terms of Service
+                </Link>
+                <Link href={`/${currentTenantSlug}/cookies`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
+                  Cookie Policy
+                </Link>
+                <Link href={`/${currentTenantSlug}/accessibility`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
+                  Accessibility
+                </Link>
+              </nav>
+
+              <p className="text-white/40 text-xs text-center sm:text-left">
+                A premium travel template. Configure for your agency.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
