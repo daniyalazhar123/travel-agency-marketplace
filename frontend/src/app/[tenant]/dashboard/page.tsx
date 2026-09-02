@@ -10,34 +10,29 @@ interface TenantPageProps {
   params: Promise<{ tenant: string }>;
 }
 
-const stats = [
-  { label: "Total Bookings", value: "0", change: null, description: "No bookings this period", icon: Calendar },
-  { label: "Revenue", value: "$0", change: null, description: "No revenue this period", icon: BarChart3 },
-  { label: "Active Clients", value: "0", change: null, description: "No active clients", icon: Users },
-  { label: "Destinations", value: "6", change: "+2 this month", description: "Curated destinations", icon: MapPin },
-];
-
+// Quick actions: only routes that EXIST. Disabled entries render as
+// non-clickable "coming soon" rows instead of dead 404 links.
 const quickActions = [
-  { label: "New Booking", icon: Plus, href: "/booking/new", description: "Create a new booking" },
-  { label: "Add Client", icon: Users, href: "/clients/new", description: "Add a new client" },
-  { label: "Manage Destinations", icon: MapPin, href: "/destinations/manage", description: "Edit destinations" },
-  { label: "View Reports", icon: BarChart3, href: "/reports", description: "Business analytics" },
+  { label: "New Booking Request", icon: Plus, href: "/booking", description: "Create a new booking request", enabled: true },
+  { label: "Manage Destinations", icon: MapPin, href: null, description: "Destination editor — coming soon", enabled: false },
+  { label: "Add Client", icon: Users, href: null, description: "Client CRM — coming soon", enabled: false },
+  { label: "View Reports", icon: BarChart3, href: null, description: "Analytics — coming soon", enabled: false },
 ];
 
 const recentActivity = [
-  { id: 1, type: "system", description: "System initialized", time: "Just now", status: "completed" },
-  { id: 2, type: "config", description: "Tenant configuration loaded", time: "1 minute ago", status: "completed" },
-  { id: 3, type: "sync", description: "Destination data synchronized", time: "5 minutes ago", status: "completed" },
+  { id: 1, type: "system", description: "Platform connected to Neon database", time: "Recently", status: "completed" },
+  { id: 2, type: "config", description: "Tenant configuration loaded", time: "Recently", status: "completed" },
+  { id: 3, type: "bookings", description: "Booking intake now live via /api/booking", time: "Recently", status: "completed" },
 ];
 
 export async function generateMetadata({ params }: TenantPageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const tenant = getTenantConfig(resolvedParams.tenant);
-  
+
   if (!tenant) {
     return { title: "Tenant Not Found" };
   }
-  
+
   return {
     title: `Dashboard - ${tenant.name}`,
     description: "Agency dashboard overview",
@@ -47,10 +42,24 @@ export async function generateMetadata({ params }: TenantPageProps): Promise<Met
 export default async function TenantDashboardPage({ params }: TenantPageProps) {
   const resolvedParams = await params;
   const tenant = getTenantConfig(resolvedParams.tenant);
-  
+
   if (!tenant) {
     return null;
   }
+
+  // Real values from tenant config instead of hardcoded numbers
+  const stats = [
+    { label: "Total Bookings", value: "0", change: null, description: "Connect your booking feed to see live data", icon: Calendar },
+    { label: "Revenue", value: "$0", change: null, description: "Connect payment processing to see revenue", icon: BarChart3 },
+    { label: "Active Clients", value: "0", change: null, description: "No client accounts yet", icon: Users },
+    {
+      label: "Destinations",
+      value: String(tenant.destinations?.length ?? 0),
+      change: null,
+      description: "Curated destinations live on your site",
+      icon: MapPin,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,21 +126,42 @@ export default async function TenantDashboardPage({ params }: TenantPageProps) {
                 <CardTitle className="text-lg font-medium text-foreground">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {quickActions.map((action) => (
-                  <Link
-                    key={action.label}
-                    href={`/${resolvedParams.tenant}${action.href}`}
-                    className="flex items-center gap-3 p-3 rounded-lg text-foreground/80 hover:text-foreground hover:bg-muted transition-colors group"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-accent/10 transition-colors">
-                      <action.icon className="w-5 h-5 text-foreground group-hover:text-accent transition-colors" aria-hidden="true" />
+                {quickActions.map((action) =>
+                  action.enabled && action.href ? (
+                    <Link
+                      key={action.label}
+                      href={`/${resolvedParams.tenant}${action.href}`}
+                      className="flex items-center gap-3 p-3 rounded-lg text-foreground/80 hover:text-foreground hover:bg-muted transition-colors group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center group-hover:bg-accent/10 transition-colors">
+                        <action.icon className="w-5 h-5 text-foreground group-hover:text-accent transition-colors" aria-hidden="true" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-sm">{action.label}</p>
+                        <p className="text-xs text-muted-foreground">{action.description}</p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-accent group-hover:translate-x-1 transition-all" aria-hidden="true" />
+                    </Link>
+                  ) : (
+                    <div
+                      key={action.label}
+                      className="flex items-center gap-3 p-3 rounded-lg text-muted-foreground/70 cursor-not-allowed"
+                      aria-disabled="true"
+                      title="Coming soon"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center">
+                        <action.icon className="w-5 h-5 text-muted-foreground/60" aria-hidden="true" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-sm text-muted-foreground/80">{action.label}</p>
+                        <p className="text-xs text-muted-foreground/60">{action.description}</p>
+                      </div>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-muted text-muted-foreground" aria-label="Coming soon">
+                        Soon
+                      </span>
                     </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-medium text-sm">{action.label}</p>
-                      <p className="text-xs text-muted-foreground">{action.description}</p>
-                    </div>
-                  </Link>
-                ))}
+                  )
+                )}
               </CardContent>
             </Card>
           </div>

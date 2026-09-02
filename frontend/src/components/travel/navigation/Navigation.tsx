@@ -40,12 +40,15 @@ const dropdownVariants = {
   exit: { opacity: 0, y: 4, scale: 0.98, transition: { duration: 0.15, ease: easing } },
 };
 
+// Category links route to the real /destinations page (filtered client-side).
+// No category-specific routes exist yet — the label conveys intent for a future
+// release; the href never 404s.
 const destinationCategories = [
-  { label: "Europe", href: "/destinations/europe" },
-  { label: "Asia Pacific", href: "/destinations/asia" },
-  { label: "Americas", href: "/destinations/americas" },
-  { label: "Africa & Middle East", href: "/destinations/africa" },
-  { label: "Private Islands", href: "/destinations/islands" },
+  { label: "Europe", href: "/destinations?category=Europe", badge: null },
+  { label: "Asia Pacific", href: "/destinations?category=Asia%20Pacific", badge: null },
+  { label: "Americas", href: "/destinations?category=Americas", badge: null },
+  { label: "Africa & Middle East", href: "/destinations?category=Africa", badge: null },
+  { label: "Private Islands", href: "/destinations?category=Island%20Escape", badge: "Soon" },
 ];
 
 export function Navigation({ tenant, currentTenantSlug }: NavigationProps) {
@@ -187,12 +190,17 @@ export function Navigation({ tenant, currentTenantSlug }: NavigationProps) {
                             <div className="p-2">
                               {destinationCategories.map((cat) => (
                                 <Link
-                                  key={cat.href}
+                                  key={cat.label}
                                   href={buildHref(cat.href)}
                                   className="flex items-center gap-3 px-3 py-2.5 text-sm text-foreground/80 hover:text-foreground hover:bg-muted rounded-lg transition-colors duration-150"
                                   onClick={() => setIsDestDropdownOpen(false)}
                                 >
-                                  {cat.label}
+                                  <span>{cat.label}</span>
+                                  {cat.badge && (
+                                    <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-accent/10 text-accent" aria-label="Coming soon">
+                                      {cat.badge}
+                                    </span>
+                                  )}
                                 </Link>
                               ))}
                             </div>
