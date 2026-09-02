@@ -1,7 +1,12 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
-const scryptAsync = promisify(scrypt);
+const scryptAsync: (
+  password: string | Buffer,
+  salt: string | Buffer,
+  keylen: number,
+  options?: { N: number; r: number; p: number }
+) => Promise<Buffer> = promisify(scrypt) as never;
 
 /**
  * SCrypt password hashing (no external deps, Node built-in).
@@ -9,7 +14,7 @@ const scryptAsync = promisify(scrypt);
  */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
-  const derived = (await scryptAsync(password, salt, 64)) as Buffer;
+  const derived = await scryptAsync(password, salt, 64);
   return `scrypt$16384$8$1$${salt.toString("hex")}$${derived.toString("hex")}`;
 }
 
@@ -20,11 +25,11 @@ export async function verifyPassword(password: string, stored: string): Promise<
     const salt = Buffer.from(saltHex, "hex");
     const expected = Buffer.from(hashHex, "hex");
     const keylen = expected.length;
-    const derived = (await scryptAsync(password, salt, keylen, {
+    const derived = await scryptAsync(password, salt, keylen, {
       N: parseInt(N, 10),
       r: parseInt(r, 10),
       p: parseInt(p, 10),
-    })) as Buffer;
+    });
     return derived.length === expected.length && timingSafeEqual(derived, expected);
   } catch {
     return false;

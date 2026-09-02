@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -49,7 +50,10 @@ class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),  # DB-side default for raw SQL inserts
+        default=uuid.uuid4,  # ORM-side convenience
     )
     tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
@@ -89,7 +93,10 @@ class Booking(TimestampMixin, Base):
     __tablename__ = "bookings"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),  # DB-side default for raw SQL inserts
+        default=uuid.uuid4,  # ORM-side convenience
     )
     tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -138,7 +145,10 @@ class Lead(TimestampMixin, Base):
     __tablename__ = "leads"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),  # DB-side default for raw SQL inserts
+        default=uuid.uuid4,  # ORM-side convenience
     )
     tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
