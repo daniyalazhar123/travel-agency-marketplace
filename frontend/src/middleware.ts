@@ -22,15 +22,24 @@ const TENANT_SCOPED_ROUTES = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip if already tenant-scoped (starts with /demo/ or /default/ or any known tenant)
-  // or is a static asset / API / internal Next.js path
+  // ---------------------------------------------------------------
+  // ROOT -> DEFAULT TENANT
+  // Pure server-side HTTP 307 redirect, executed in Edge runtime
+  // BEFORE any page rendering — no client-side navigation, no FOUC.
+  // Must run first, above every other rule.
+  // ---------------------------------------------------------------
+  if (pathname === "/" || pathname === "") {
+    return NextResponse.redirect(new URL(`/${DEFAULT_TENANT}`, request.url), 307);
+  }
+
+  // Skip static assets / API / internal Next.js paths
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/og-image") ||
-    pathname.startsWith("/site.webmanifest") ||
-    pathname === "/"
+    pathname.startsWith("/apple-touch-icon") ||
+    pathname.startsWith("/site.webmanifest")
   ) {
     return NextResponse.next();
   }
@@ -52,7 +61,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files and internals
+    // Match all paths (incl. /) except static files and internals
     "/((?!_next/static|_next/image|favicon.ico|og-image.jpg|site.webmanifest).*)",
   ],
 };
