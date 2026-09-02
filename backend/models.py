@@ -2,6 +2,7 @@
 import enum
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -17,6 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from typing import Optional as _Optional
 
 
 def utcnow() -> datetime:
@@ -114,8 +116,10 @@ class Booking(TimestampMixin, Base):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     travelers: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    # Stored as string with currency to avoid float math on money
-    budget: Mapped[Numeric(12, 2) | None] = mapped_column(Numeric(12, 2), nullable=True)
+    # Stored as Numeric(12,2) with currency to avoid float math on money
+    budget: Mapped[_Optional[Decimal]] = mapped_column(
+        Numeric(12, 2), nullable=True
+    )
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

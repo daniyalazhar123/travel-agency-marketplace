@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 
 from config import get_settings
 from database import check_db_connection, dispose_engine
+from mailer import send_email as _noop_check  # noqa: F401 — import sanity at startup
+from routers.auth import router as auth_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +39,12 @@ async def lifespan(app: FastAPI):
         )
         if settings.is_production:
             raise RuntimeError("Database is required in production")
+
+    # --- Resend email check ---
+    if settings.resend_api_key:
+        logger.info("✅ RESEND_API_KEY configured — email verification active")
+    else:
+        logger.warning("⚠️  RESEND_API_KEY not set — verification emails are dev no-ops")
 
     # --- Groq API key presence check (no network call, just config sanity) ---
     if settings.groq_api_key:
@@ -73,6 +81,9 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
     max_age=3600,
 )
+
+
+app.include_router(auth_router)
 
 
 @app.get("/health", tags=["system"])

@@ -10,3 +10,4 @@ httpx
 groq
 python-multipart
 bcrypt<4.1
+email-validator>=2.0

@@ -78,6 +78,21 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 TOKEN_TYPE_ACCESS = "access"
 TOKEN_TYPE_REFRESH = "refresh"
+TOKEN_TYPE_EMAIL_VERIFY = "email_verification"
+
+
+def create_email_verification_token(user_id: uuid.UUID, tenant_id: str) -> str:
+    """Single-purpose token: verifies email ownership. Short-lived, revocable by re-issuing (jti changes)."""
+    return _create_token(
+        subject=user_id,
+        token_type=TOKEN_TYPE_EMAIL_VERIFY,
+        expires_delta=timedelta(minutes=settings.email_verification_expire_minutes),
+        extra_claims={"tenant_id": tenant_id},
+    )
+
+
+def decode_email_verification_token(token: str) -> dict[str, Any]:
+    return decode_token(token, expected_type=TOKEN_TYPE_EMAIL_VERIFY)
 
 
 def _create_token(
@@ -143,6 +158,8 @@ __all__ = [
     "verify_password",
     "create_access_token",
     "create_refresh_token",
+    "create_email_verification_token",
+    "decode_email_verification_token",
     "decode_token",
     "JWTError",
 ]

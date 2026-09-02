@@ -1,7 +1,33 @@
 """Application settings loaded from backend/.env via pydantic-settings."""
 from functools import lru_cache
+from urllib.parse import urlsplit, urlunsplit
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _asyncpg_url(raw: str) -> str:
+    """Convert a libpq-style DATABASE_URL to an asyncpg-ready URL.
+
+    - swaps the driver to postgresql+asyncpg
+    - strips libpq-only query params (sslmode, channel_binding, sslrootcertificate)
+      that asyncpg does not understand (asyncpg verifies TLS by default)
+    """
+    url = raw.strip()
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+
+    parts = urlsplit(url)
+    if parts.query:
+        kept = [
+            kv
+            for kv in parts.query.split("&")
+            if not kv.lower().startswith(("sslmode=", "channel_binding=", "sslrootcertificate="))
+        ]
+        url = urlunsplit((parts.scheme, parts.netloc, parts.path, "&".join(kept), parts.fragment))
+    return url
 
 
 class Settings(BaseSettings):
@@ -32,23 +58,21 @@ class Settings(BaseSettings):
         alias="FRONTEND_ORIGINS",
     )
 
+    # --- Email (Resend) ---
+    resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+    email_from: str = Field(default="Travel Agency <onboarding@resend.dev>", alias="EMAIL_FROM")
+    app_base_url: str = Field(default="http://localhost:3000", alias="APP_BASE_URL")
+    email_verification_expire_minutes: int = Field(default=30, alias="EMAIL_VERIFICATION_EXPIRE_MINUTES")
+    require_email_verification: bool = Field(default=True, alias="REQUIRE_EMAIL_VERIFICATION")
+
     # --- External AI providers ---
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     cohere_api_key: str = Field(default="", alias="COHERE_API_KEY")
 
     @property
     def async_database_url(self) -> str:
-        """Ensure the URL uses the asyncpg driver required by SQLAlchemy async engine."""
-        url = self.database_url
-        if not url:
-            return ""
-        if url.startswith("postgresql+asyncpg://"):
-            return url
-        if url.startswith("postgresql://"):
-            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-        if url.startswith("postgres://"):
-            return url.replace("postgres://", "postgresql+asyncpg://", 1)
-        return url
+        """Convert the libpq-style DATABASE_URL to an asyncpg-ready URL."""
+        return _asyncpg_url(self.database_url) if self.database_url else ""
 
     @property
     def cors_origins(self) -> list[str]:

@@ -28,11 +28,10 @@ def get_engine() -> AsyncEngine:
         if not url:
             raise RuntimeError("DATABASE_URL is not configured in backend/.env")
 
-        connect_args = {}
         # Neon's PgBouncer-style pooler does not support server-side prepared statements.
+        connect_args: dict = {}
         if "neon.tech" in url or "pooler" in url:
             connect_args["statement_cache_size"] = 0
-            connect_args["prepared_statement_cache_size"] = 0  # asyncpg >= 0.29
 
         _engine = create_async_engine(
             url,
