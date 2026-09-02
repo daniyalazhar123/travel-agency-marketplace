@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant, Montserrat } from "next/font/google";
 import "./globals.css";
+import { CookieBanner } from "@/components/ui/CookieBanner";
 
 const cormorant = Cormorant({
   subsets: ["latin"],
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     description: "Ultra-premium multi-tenant travel marketplace platform for luxury travel agencies",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "Travel Agency Marketplace - Premium Travel Platform",
@@ -52,12 +53,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Travel Agency Marketplace | Premium Travel Platform",
     description: "Ultra-premium multi-tenant travel marketplace platform for luxury travel agencies",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.png"],
     creator: "@travelagency",
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon-16x16.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
@@ -85,7 +89,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
-      <body className="font-body antialiased">{children}</body>
+      <body className="font-body antialiased">
+        {children}
+        <CookieBanner />
+      </body>
     </html>
   );
 }

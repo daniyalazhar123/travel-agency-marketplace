@@ -1,0 +1,21 @@
+{
+  "name": "Travel Agency Marketplace",
+  "short_name": "TravelAgency",
+  "description": "Premium multi-tenant travel agency platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF9",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
