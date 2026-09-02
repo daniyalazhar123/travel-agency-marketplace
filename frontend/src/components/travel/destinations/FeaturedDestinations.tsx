@@ -171,7 +171,7 @@ export function FeaturedDestinations({
             animate="visible"
           >
             <Link
-              href={`${resolvedViewAllHref}/${primaryDestination.id}`}
+              href={resolvedViewAllHref}
               className="group block"
               aria-label={`Explore ${primaryDestination.name}`}
             >
@@ -240,7 +240,7 @@ export function FeaturedDestinations({
           {secondaryDestinations.map((destination, index) => (
             <motion.div key={destination.id} variants={cardVariants} style={{ transitionDelay: `${index * 100}ms` }}>
               <Link
-                href={`${resolvedViewAllHref}/${destination.id}`}
+                href={resolvedViewAllHref}
                 className="group block glass-card overflow-hidden aspect-[4/3] elegant-shadow-hover"
                 aria-label={`Explore ${destination.name}`}
               >

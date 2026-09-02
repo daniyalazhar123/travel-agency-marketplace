@@ -127,7 +127,7 @@ export function PremiumCTA({
             {primaryCTA && (
               <motion.div className="w-full sm:w-auto">
                 <Link
-                  href={`/${currentTenantSlug}${primaryCTA.href.startsWith("/") ? primaryCTA.href.slice(1) : primaryCTA.href}`}
+                  href={`/${currentTenantSlug}${primaryCTA.href.startsWith("/") ? primaryCTA.href : "/" + primaryCTA.href}`}
                   className="btn-primary group w-full sm:w-auto px-10 py-4 text-lg"
                 >
                   {primaryCTA.label}
@@ -138,7 +138,7 @@ export function PremiumCTA({
             {secondaryCTA && (
               <motion.div className="w-full sm:w-auto">
                 <Link
-                  href={`/${currentTenantSlug}${secondaryCTA.href.startsWith("/") ? secondaryCTA.href.slice(1) : secondaryCTA.href}`}
+                  href={`/${currentTenantSlug}${secondaryCTA.href.startsWith("/") ? secondaryCTA.href : "/" + secondaryCTA.href}`}
                   className="btn-secondary group w-full sm:w-auto px-10 py-4 text-lg border-white/30 text-white hover:bg-white/10"
                 >
                   {secondaryCTA.label}

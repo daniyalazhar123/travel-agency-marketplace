@@ -170,7 +170,7 @@ export function EditorialTravel({
             animate="visible"
           >
             <Link
-              href={`${resolvedViewAllHref}/${featuredArticle.id}`}
+              href={resolvedViewAllHref}
               className="group block"
               aria-label={`Read: ${featuredArticle.title}`}
             >
@@ -264,7 +264,7 @@ export function EditorialTravel({
           {secondaryArticles.map((article, index) => (
             <motion.div key={article.id} variants={cardVariants} style={{ transitionDelay: `${index * 100}ms` }}>
               <Link
-                href={`${resolvedViewAllHref}/${article.id}`}
+                href={resolvedViewAllHref}
                 className="group block glass-card overflow-hidden aspect-[4/3] lg:aspect-auto min-h-[350px] elegant-shadow-hover flex flex-col"
                 aria-label={`Read: ${article.title}`}
               >

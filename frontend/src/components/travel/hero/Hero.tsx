@@ -128,7 +128,7 @@ export function Hero({ tenant, currentTenantSlug }: HeroProps) {
             {primaryCTA && (
               <motion.div variants={buttonVariants} style={{ transitionDelay: "0ms" }}>
                 <Link
-                  href={`/${currentTenantSlug}${primaryCTA.href.startsWith("/") ? primaryCTA.href.slice(1) : primaryCTA.href}`}
+                  href={`/${currentTenantSlug}${primaryCTA.href.startsWith("/") ? primaryCTA.href : "/" + primaryCTA.href}`}
                   className={`${getCTAClassName(primaryCTA.variant || "primary")} group px-10 py-4 text-lg`}
                 >
                   {primaryCTA.label}
@@ -139,7 +139,7 @@ export function Hero({ tenant, currentTenantSlug }: HeroProps) {
             {secondaryCTA && (
               <motion.div variants={buttonVariants} style={{ transitionDelay: "100ms" }}>
                 <Link
-                  href={`/${currentTenantSlug}${secondaryCTA.href.startsWith("/") ? secondaryCTA.href.slice(1) : secondaryCTA.href}`}
+                  href={`/${currentTenantSlug}${secondaryCTA.href.startsWith("/") ? secondaryCTA.href : "/" + secondaryCTA.href}`}
                   className={`${getCTAClassName(secondaryCTA.variant || "secondary")} px-10 py-4 text-lg`}
                 >
                   {secondaryCTA.label}

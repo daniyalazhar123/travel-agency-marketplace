@@ -193,7 +193,7 @@ export function CuratedExperiences({
             animate="visible"
           >
             <Link
-              href={`${resolvedViewAllHref}/${primaryExperience.id}`}
+              href={resolvedViewAllHref}
               className="group block"
               aria-label={`Explore ${primaryExperience.name}`}
             >
@@ -285,7 +285,7 @@ export function CuratedExperiences({
           {secondaryExperiences.map((experience, index) => (
             <motion.div key={experience.id} variants={cardVariants} style={{ transitionDelay: `${index * 100}ms` }}>
               <Link
-                href={`${resolvedViewAllHref}/${experience.id}`}
+                href={resolvedViewAllHref}
                 className="group block glass-card overflow-hidden aspect-[4/3] elegant-shadow-hover flex flex-col"
                 aria-label={`Explore ${experience.name}`}
               >
