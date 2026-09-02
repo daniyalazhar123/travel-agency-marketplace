@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Mail, MapPin, Phone, ArrowRight, Globe, MessageSquare, Users, Send, Monitor } from "lucide-react";
+import { Mail, MapPin, Phone, ArrowRight, Globe, MessageSquare, Users, Send, Monitor, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { type TenantConfig, type SocialLink } from "@/lib/tenant/config";
 
 interface FooterProps {
@@ -30,42 +31,77 @@ const getSocialIcon = (platform: string) => {
   return socialIcons[platform] || socialIcons.default;
 };
 
+// Only routes that actually exist. Dead links were 404ing (trust killer).
 const navigationSections = {
   explore: [
-    { label: "All Destinations", href: "/explore" },
+    { label: "All Destinations", href: "/destinations" },
     { label: "Experiences", href: "/experiences" },
-    { label: "Featured Journeys", href: "/journeys" },
-    { label: "Travel Guides", href: "/guides" },
-    { label: "New Openings", href: "/new" },
+    { label: "Travel Journal", href: "/journal" },
+    { label: "About Us", href: "/about" },
   ],
   destinations: [
-    { label: "Europe", href: "/destinations/europe" },
-    { label: "Asia Pacific", href: "/destinations/asia" },
-    { label: "Americas", href: "/destinations/americas" },
-    { label: "Africa & Middle East", href: "/destinations/africa" },
-    { label: "Private Islands", href: "/destinations/islands" },
-  ],
-  company: [
-    { label: "About Us", href: "/about" },
-    { label: "Our Philosophy", href: "/philosophy" },
-    { label: "Sustainability", href: "/sustainability" },
-    { label: "Careers", href: "/careers" },
-    { label: "Press", href: "/press" },
+    { label: "All Destinations", href: "/destinations" },
+    { label: "Experiences", href: "/experiences" },
+    { label: "Plan a Journey", href: "/booking" },
+    { label: "Contact Us", href: "/contact" },
   ],
   support: [
     { label: "Contact Us", href: "/contact" },
-    { label: "FAQ", href: "/faq" },
-    { label: "Travel Insurance", href: "/insurance" },
-    { label: "Booking Terms", href: "/terms" },
+    { label: "Plan Your Trip", href: "/booking" },
     { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
   ],
 };
+
+type NewsletterState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "success"; message: string }
+  | { status: "error"; message: string };
 
 export function Footer({ tenant, currentTenantSlug }: FooterProps) {
   const socialLinks = tenant.socialLinks?.length ? tenant.socialLinks : defaultSocialLinks;
   const contact = tenant.contact || {};
-
   const currentYear = new Date().getFullYear();
+
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<NewsletterState>({ status: "idle" });
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (state.status === "loading") return;
+
+    // Quick client-side sanity (server re-validates with Zod)
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setState({ status: "error", message: "Please enter a valid email address." });
+      return;
+    }
+
+    setState({ status: "loading" });
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          tenantId: currentTenantSlug || tenant.id || "demo",
+          source: "newsletter",
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { success: boolean; message?: string; error?: string }
+        | null;
+
+      if (res.ok && json?.success) {
+        setState({ status: "success", message: json.message ?? "Thank you for subscribing!" });
+        setEmail("");
+      } else {
+        setState({ status: "error", message: json?.error ?? "Something went wrong. Please try again." });
+      }
+    } catch {
+      setState({ status: "error", message: "Network error — please check your connection and try again." });
+    }
+  };
 
   return (
     <footer className="bg-primary text-on-primary" role="contentinfo" aria-label="Site footer">
@@ -110,7 +146,7 @@ export function Footer({ tenant, currentTenantSlug }: FooterProps) {
             <h3 className="label text-accent mb-4 uppercase tracking-widest">Explore</h3>
             <ul className="space-y-3" role="list">
               {navigationSections.explore.map((item) => (
-                <li key={item.href}>
+                <li key={item.label}>
                   <Link
                     href={`/${currentTenantSlug}${item.href}`}
                     className="text-white/70 hover:text-white transition-colors text-sm"
@@ -123,10 +159,10 @@ export function Footer({ tenant, currentTenantSlug }: FooterProps) {
           </nav>
 
           <nav aria-label="Destinations">
-            <h3 className="label text-accent mb-4 uppercase tracking-widest">Destinations</h3>
+            <h3 className="label text-accent mb-4 uppercase tracking-widest">Journeys</h3>
             <ul className="space-y-3" role="list">
               {navigationSections.destinations.map((item) => (
-                <li key={item.href}>
+                <li key={item.label}>
                   <Link
                     href={`/${currentTenantSlug}${item.href}`}
                     className="text-white/70 hover:text-white transition-colors text-sm"
@@ -138,21 +174,65 @@ export function Footer({ tenant, currentTenantSlug }: FooterProps) {
             </ul>
           </nav>
 
-          <nav aria-label="Company">
-            <h3 className="label text-accent mb-4 uppercase tracking-widest">Company</h3>
-            <ul className="space-y-3" role="list">
-              {navigationSections.company.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={`/${currentTenantSlug}${item.href}`}
-                    className="text-white/70 hover:text-white transition-colors text-sm"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {/* Real newsletter signup — posts to /api/newsletter */}
+          <div>
+            <h3 className="label text-accent mb-4 uppercase tracking-widest">Stay Inspired</h3>
+            <p className="text-white/70 text-sm mb-4 leading-relaxed">
+              Monthly dispatches of extraordinary destinations and member-only journeys.
+            </p>
+            <form onSubmit={handleSubscribe} className="space-y-3" noValidate>
+              <label htmlFor="newsletter-email" className="sr-only">
+                Email address for newsletter
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" aria-hidden="true" />
+                <input
+                  id="newsletter-email"
+                  type="text"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (state.status === "error") setState({ status: "idle" });
+                  }}
+                  disabled={state.status === "loading"}
+                  maxLength={320}
+                  className="w-full rounded-lg bg-white/10 border border-white/20 pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all disabled:opacity-60"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={state.status === "loading"}
+                className="btn-accent w-full flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {state.status === "loading" ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    Subscribing...
+                  </>
+                ) : (
+                  <>
+                    Subscribe
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </>
+                )}
+              </button>
+            </form>
+            {state.status === "success" && (
+              <p role="status" aria-live="polite" className="flex items-start gap-2 text-sm text-white/90 mt-3">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-accent" aria-hidden="true" />
+                {state.message}
+              </p>
+            )}
+            {state.status === "error" && (
+              <p role="alert" className="flex items-start gap-2 text-sm text-white/90 mt-3">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-error" aria-hidden="true" />
+                {state.message}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="pt-8 lg:pt-12 border-t border-white/10">
@@ -176,15 +256,6 @@ export function Footer({ tenant, currentTenantSlug }: FooterProps) {
                   </a>
                 ))}
               </nav>
-
-              <Link
-                href={`/${currentTenantSlug}/newsletter`}
-                className="btn-ghost text-white/70 hover:text-white border-white/20 hover:border-white/30 px-6 py-2 text-sm hidden sm:inline-flex"
-              >
-                <Mail className="w-4 h-4 mr-2" aria-hidden="true" />
-                Newsletter
-                <ArrowRight className="w-4 h-4" aria-hidden="true" />
-              </Link>
             </div>
           </div>
 
@@ -197,11 +268,8 @@ export function Footer({ tenant, currentTenantSlug }: FooterProps) {
                 <Link href={`/${currentTenantSlug}/terms`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
                   Terms of Service
                 </Link>
-                <Link href={`/${currentTenantSlug}/cookies`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
-                  Cookie Policy
-                </Link>
-                <Link href={`/${currentTenantSlug}/accessibility`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
-                  Accessibility
+                <Link href={`/${currentTenantSlug}/contact`} className="text-white/50 hover:text-white/70 transition-colors text-sm">
+                  Contact
                 </Link>
               </nav>
 
