@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Next.js 16 proxy convention (replaces deprecated middleware.ts).
+// Runs in Edge runtime before any page rendering.
+
 const DEFAULT_TENANT = "demo";
 
 const TENANT_SCOPED_ROUTES = [
@@ -19,7 +22,7 @@ const TENANT_SCOPED_ROUTES = [
   "/accessibility",
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ---------------------------------------------------------------
