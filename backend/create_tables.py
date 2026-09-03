@@ -12,7 +12,7 @@ from sqlalchemy import text
 
 from config import get_settings
 from database import get_engine, dispose_engine
-from models import Base, Booking, Lead, User  # noqa: F401 — ensure models are registered
+from models import Base, Booking, Destination, Lead, User  # noqa: F401 — ensure models are registered
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("create_tables")
@@ -42,7 +42,7 @@ async def main() -> None:
         tables = [row[0] for row in result.fetchall()]
 
     logger.info("Tables now in DB: %s", sorted(tables))
-    required = {"users", "bookings", "leads"}
+    required = {"users", "bookings", "leads", "destinations"}
     missing = required - set(tables)
     if missing:
         logger.error("MISSING TABLES: %s", missing)

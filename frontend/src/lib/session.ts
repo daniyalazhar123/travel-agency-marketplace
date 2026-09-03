@@ -1,0 +1,71 @@
+"use client";
+
+/**
+ * Client-side session helpers (JWT in localStorage — demo-scope transport).
+ * For production hardening, migrate to backend-set httpOnly cookies.
+ */
+
+const TOKEN_KEY = "access_token";
+const USER_KEY = "user_info";
+
+export interface SessionUser {
+  id: string;
+  email: string;
+  role: string;
+  tenant_id: string;
+}
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setSession(token: string, user: SessionUser): void {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch {
+    // Storage blocked — session lives only in memory
+  }
+}
+
+export function getSessionUser(): SessionUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as SessionUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSession(): void {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Server-side token validation via the backend.
+ * Returns the session user, or null if token is invalid/expired.
+ */
+export async function validateToken(token: string): Promise<SessionUser | null> {
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
+  try {
+    const res = await fetch(`${base}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as SessionUser;
+    return json ?? null;
+  } catch {
+    return null;
+  }
+}

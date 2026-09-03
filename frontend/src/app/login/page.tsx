@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isValidEmail } from "@/lib/password-policy";
+import { setSession } from "@/lib/session";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
@@ -52,17 +53,16 @@ function LoginInner() {
         body: JSON.stringify({ email: email.trim(), password }),
       });
       const json = (await res.json().catch(() => null)) as
-        | { success?: boolean; detail?: string | { message?: string }; access_token?: string }
+        | { success?: boolean; detail?: string | { message?: string }; access_token?: string; user_id?: string; role?: string; tenant_id?: string }
         | null;
 
       if (res.ok && json?.access_token) {
-        // Session transport: httpOnly would be ideal (set by backend); here we
-        // persist the access token client-side for the demo dashboard scope.
-        try {
-          localStorage.setItem("access_token", json.access_token);
-        } catch {
-          // Storage blocked — session lives in memory only for this page
-        }
+        setSession(json.access_token, {
+          id: json.user_id ?? "",
+          email: email.trim(),
+          role: json.role ?? "customer",
+          tenant_id: json.tenant_id ?? DEFAULT_TENANT,
+        });
         router.push(safeNext);
       } else if (res.status === 403) {
         setError(

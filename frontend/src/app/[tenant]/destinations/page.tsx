@@ -1,42 +1,96 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getTenantConfig } from "@/lib/tenant/config";
 import { Footer } from "@/components/travel/footer/Footer";
 import { MapPin, Star, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { FilterBar } from "@/components/travel/filter/FilterBar";
 
 interface TenantPageProps {
   params: Promise<{ tenant: string }>;
   searchParams: Promise<{ category?: string; featured?: string }>;
 }
 
+interface PublicDestination {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  price?: number;
+  currency?: string;
+  category?: string;
+  rating?: number;
+  featured?: boolean;
+  location?: { city?: string; country?: string };
+}
+
 export async function generateMetadata({ params }: TenantPageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const tenant = getTenantConfig(resolvedParams.tenant);
-
-  if (!tenant) {
-    return { title: "Tenant Not Found" };
-  }
-
+  if (!tenant) return { title: "Tenant Not Found" };
   return {
     title: `Destinations - ${tenant.name}`,
     description: `Explore our curated collection of extraordinary destinations worldwide. ${tenant.description}`,
   };
 }
 
+/**
+ * Fetch live destinations from the backend API.
+ * Returns null on any failure so the caller can fall back to config data.
+ */
+async function fetchApiDestinations(tenantId: string): Promise<PublicDestination[] | null> {
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
+  try {
+    const res = await fetch(`${base}/destinations?tenant_id=${encodeURIComponent(tenantId)}`, {
+      next: { revalidate: 60 }, // ISR: refresh every minute
+    });
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      price: number | null;
+      currency: string;
+      image_url: string | null;
+    }>;
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.title,
+      description: r.description ?? "",
+      image: r.image_url ?? "",
+      price: r.price ?? undefined,
+      currency: r.currency,
+    }));
+  } catch {
+    return null;
+  }
+}
+
 export default async function TenantDestinationsPage({ params, searchParams }: TenantPageProps) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const tenant = getTenantConfig(resolvedParams.tenant);
+  if (!tenant) notFound();
 
-  if (!tenant) {
-    return null;
-  }
+  // 1) Live API data first; 2) tenant config fallback when backend is down
+  const apiDestinations = await fetchApiDestinations(resolvedParams.tenant);
+  const configDestinations: PublicDestination[] = (tenant.destinations ?? []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    description: d.description,
+    image: d.image,
+    price: d.price,
+    currency: d.currency,
+    category: d.category,
+    rating: d.rating,
+    featured: d.featured,
+    location: d.location ? { city: d.location.city, country: d.location.country } : undefined,
+  }));
+  const destinations = apiDestinations ?? configDestinations;
+  const isLive = apiDestinations !== null;
 
-  const destinations = tenant.destinations ?? [];
-  const featuredDestinations = destinations.filter((d) => d.featured);
   const categories = [...new Set(destinations.map((d) => d.category).filter(Boolean))] as string[];
   const selectedCategory = resolvedSearchParams.category;
+  const featuredDestinations = destinations.filter((d) => d.featured);
 
   const filteredDestinations = selectedCategory
     ? destinations.filter((d) => d.category === selectedCategory)
@@ -44,12 +98,16 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
 
   const formatPrice = (price?: number, currency = "USD") => {
     if (!price) return "Contact for pricing";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(price);
+    } catch {
+      return `${currency} ${price.toLocaleString()}`;
+    }
   };
 
   return (
@@ -66,12 +124,14 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
           </div>
 
           {categories.length > 0 && (
-            <FilterBar
-              options={categories.map((c) => ({ label: c, value: c }))}
-              selectedValue={selectedCategory ?? null}
-              basePath={`/${resolvedParams.tenant}/destinations`}
-              label="Filter destinations by category"
-            />
+            <div className="mb-10">
+              <Link
+                href={`/${resolvedParams.tenant}/destinations`}
+                className="text-sm text-accent hover:underline"
+              >
+                Browse all destinations
+              </Link>
+            </div>
           )}
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
@@ -82,7 +142,7 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
                 <p className="text-muted-foreground">
                   {selectedCategory
                     ? `No destinations in the "${selectedCategory}" category.`
-                    : "No destinations configured for this agency."}
+                    : "No destinations configured for this agency yet."}
                 </p>
                 <Link
                   href={`/${resolvedParams.tenant}/destinations`}
@@ -93,27 +153,25 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
               </div>
             ) : (
               filteredDestinations.map((destination) => (
-                <Link
+                <div
                   key={destination.id}
-                  href={`/${resolvedParams.tenant}/destinations/${destination.id}`}
                   className="group glass-card overflow-hidden aspect-[4/3] elegant-shadow-hover flex flex-col"
                 >
                   <div className="relative aspect-[4/3] overflow-hidden">
-                    <img
-                      src={destination.image}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" aria-hidden="true" />
-                    {destination.featured && (
-                      <div className="absolute top-4 left-4">
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-accent/90 text-on-accent text-xs font-medium">
-                          <Star className="w-3 h-3" aria-hidden="true" />
-                          Featured
-                        </span>
+                    {destination.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- remote admin-provided URLs
+                      <img
+                        src={destination.image}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/20 flex items-center justify-center">
+                        <MapPin className="w-10 h-10 text-muted-foreground/40" aria-hidden="true" />
                       </div>
                     )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" aria-hidden="true" />
                     {destination.category && (
                       <div className="absolute bottom-4 left-4">
                         <span className="px-3 py-1.5 rounded-full bg-white/90 text-primary text-xs font-medium backdrop-blur-sm">
@@ -130,10 +188,8 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
                   </div>
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="heading-card text-foreground group-hover:text-accent transition-colors">
-                        {destination.name}
-                      </h3>
-                      {destination.price && (
+                      <h3 className="heading-card text-foreground">{destination.name}</h3>
+                      {destination.price != null && (
                         <span className="text-accent font-display font-medium text-lg whitespace-nowrap">
                           {formatPrice(destination.price, destination.currency)}
                         </span>
@@ -145,18 +201,18 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
                         {destination.location.city ? `${destination.location.city}, ` : ""}{destination.location.country}
                       </p>
                     )}
-                    <p className="text-muted-foreground text-sm mb-4 flex-1 line-clamp-2">{destination.shortDescription || destination.description}</p>
-                    {destination.duration && (
-                      <p className="text-sm text-foreground/70 mb-4">
-                        <span className="font-medium">Duration: </span>{destination.duration}
-                      </p>
-                    )}
+                    <p className="text-muted-foreground text-sm mb-4 flex-1 line-clamp-2">{destination.description}</p>
                     <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                      <span className="text-sm font-medium text-foreground">Explore</span>
+                      <Link
+                        href={`/${resolvedParams.tenant}/booking`}
+                        className="text-sm font-medium text-foreground hover:text-accent transition-colors"
+                      >
+                        Plan a Journey
+                      </Link>
                       <ArrowRight className="w-4 h-4 text-accent group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                     </div>
                   </div>
-                </Link>
+                </div>
               ))
             )}
           </div>
@@ -172,6 +228,13 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
               </Link>
             </div>
           )}
+
+          {/* Data-source indicator (transparency for the demo) */}
+          <p className="mt-12 text-center text-xs text-muted-foreground/60">
+            {isLive
+              ? "Live data from agency database"
+              : "Backend offline — showing starter collection"}
+          </p>
         </div>
       </main>
       <Footer tenant={tenant} currentTenantSlug={resolvedParams.tenant} />

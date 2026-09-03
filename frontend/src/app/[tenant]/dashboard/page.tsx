@@ -1,9 +1,11 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getTenantConfig } from "@/lib/tenant/config";
 import { Footer } from "@/components/travel/footer/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AuthGuard } from "@/components/ui/AuthGuard";
 import { Plus, Users, MapPin, BarChart3, Calendar, ArrowRight } from "lucide-react";
 
 interface TenantPageProps {
@@ -14,7 +16,7 @@ interface TenantPageProps {
 // non-clickable "coming soon" rows instead of dead 404 links.
 const quickActions = [
   { label: "New Booking Request", icon: Plus, href: "/booking", description: "Create a new booking request", enabled: true },
-  { label: "Manage Destinations", icon: MapPin, href: null, description: "Destination editor — coming soon", enabled: false },
+  { label: "Manage Destinations", icon: MapPin, href: "/admin/destinations", description: "Add or remove destinations on your site", enabled: true },
   { label: "Add Client", icon: Users, href: null, description: "Client CRM — coming soon", enabled: false },
   { label: "View Reports", icon: BarChart3, href: null, description: "Analytics — coming soon", enabled: false },
 ];
@@ -62,6 +64,7 @@ export default async function TenantDashboardPage({ params }: TenantPageProps) {
   ];
 
   return (
+    <AuthGuard redirectTo={`/${resolvedParams.tenant}/dashboard`}>
     <div className="min-h-screen bg-background">
       <main className="pb-16">
         <div className="container-page">
@@ -169,5 +172,6 @@ export default async function TenantDashboardPage({ params }: TenantPageProps) {
         <Footer tenant={tenant} currentTenantSlug={resolvedParams.tenant} />
       </main>
     </div>
+    </AuthGuard>
   );
 }

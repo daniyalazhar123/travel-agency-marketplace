@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowRight, LogOut } from "lucide-react";
 import { type TenantConfig } from "@/lib/tenant/config";
+import { clearSession, getSessionUser, type SessionUser } from "@/lib/session";
 
 interface NavigationProps {
   tenant: TenantConfig;
@@ -52,22 +54,32 @@ const destinationCategories = [
 ];
 
 export function Navigation({ tenant, currentTenantSlug }: NavigationProps) {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isDestDropdownOpen, setIsDestDropdownOpen] = useState(false);
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const mobileMenuToggleRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    setSessionUser(getSessionUser());
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleLogout = () => {
+    clearSession();
+    setSessionUser(null);
+    setIsMobileMenuOpen(false);
+    router.push("/login");
+  };
 
   const navItems = tenant.navigation?.items ?? [
     { label: "Explore", href: `/${currentTenantSlug}/explore` },
@@ -240,6 +252,23 @@ export function Navigation({ tenant, currentTenantSlug }: NavigationProps) {
               </Link>
             </motion.div>
           )}
+
+          {mounted && sessionUser && (
+            <motion.div variants={linkVariants} className="hidden lg:flex items-center gap-2">
+              <span className="text-xs text-muted-foreground max-w-[140px] truncate" title={sessionUser.email}>
+                {sessionUser.email}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 text-xs font-medium text-foreground/70 hover:text-foreground border border-border rounded-lg px-3 py-2 transition-colors"
+                aria-label="Sign out"
+              >
+                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+                Sign Out
+              </button>
+            </motion.div>
+          )}
         </div>
 
         <button
@@ -283,6 +312,21 @@ export function Navigation({ tenant, currentTenantSlug }: NavigationProps) {
                   <Link href={buildHref(navCTA.href)} className={`${getCTAClassName(navCTA.variant || "primary")} w-full text-center text-base px-6 py-3`} onClick={() => { setIsMobileMenuOpen(false); mobileMenuToggleRef.current?.focus(); }}>
                     {navCTA.label}
                   </Link>
+                </motion.div>
+              )}
+
+              {mounted && sessionUser && (
+                <motion.div variants={linkVariants} className="pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground px-4 pb-2 truncate">{sessionUser.email}</p>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-base font-medium text-foreground/80 hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="w-4 h-4" aria-hidden="true" />
+                    Sign Out
+                  </button>
                 </motion.div>
               )}
             </div>

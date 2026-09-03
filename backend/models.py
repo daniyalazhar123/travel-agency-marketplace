@@ -134,6 +134,26 @@ class Booking(TimestampMixin, Base):
     user: Mapped[User | None] = relationship(back_populates="bookings")
 
 
+class Destination(TimestampMixin, Base):
+    """Admin-managed destinations (served to the public destinations page)."""
+    __tablename__ = "destinations"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),  # DB-side default for raw SQL inserts
+        default=uuid.uuid4,  # ORM-side convenience
+    )
+    tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    price: Mapped[_Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
+    image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
 class LeadSource(str, enum.Enum):
     newsletter = "newsletter"
     contact_form = "contact_form"

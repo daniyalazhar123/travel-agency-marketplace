@@ -15,6 +15,7 @@ from config import get_settings
 from database import check_db_connection, dispose_engine
 from mailer import send_email as _noop_check  # noqa: F401 — import sanity at startup
 from routers.auth import router as auth_router
+from routers.destinations import router as destinations_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -84,6 +85,7 @@ app.add_middleware(
 
 
 app.include_router(auth_router)
+app.include_router(destinations_router)
 
 
 @app.get("/health", tags=["system"])

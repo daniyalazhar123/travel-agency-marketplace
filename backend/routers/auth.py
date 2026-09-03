@@ -26,6 +26,7 @@ from auth import (
 )
 from config import get_settings
 from database import get_db
+from dependencies import get_current_user
 from mailer import is_valid_email, send_verification_email
 from models import User, UserRole
 
@@ -56,6 +57,15 @@ class TokenResponse(BaseModel):
     user_id: str
     email: str
     role: str
+    tenant_id: str
+
+
+class MeResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    role: str
+    tenant_id: str
 
 
 class MessageResponse(BaseModel):
@@ -146,6 +156,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> An
         user_id=str(user.id),
         email=user.email,
         role=user.role.value,
+        tenant_id=user.tenant_id,
     )
 
 
@@ -193,6 +204,18 @@ async def verify_email(
     return RedirectResponse(
         url=f"{settings.app_base_url.rstrip('/')}/verify-email?status=success",
         status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+    )
+
+
+@router.get("/me", response_model=MeResponse)
+async def get_me(user: User = Depends(get_current_user)) -> Any:
+    """Validate the caller's JWT and return the sanitized profile."""
+    return MeResponse(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role.value,
+        tenant_id=user.tenant_id,
     )
 
 
