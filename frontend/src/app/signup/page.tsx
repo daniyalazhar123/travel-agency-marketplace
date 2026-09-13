@@ -2,8 +2,8 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { UserPlus, Loader2, AlertCircle, Eye, EyeOff, CheckCircle2, Mail, User } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,6 @@ const BACKEND_URL =
 const DEFAULT_TENANT = "demo";
 
 function SignupInner() {
-  const router = useRouter();
-
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +26,6 @@ function SignupInner() {
   const [succeeded, setSucceeded] = useState(false);
 
   const checklist = passwordChecklist(password);
-  const allPassed = checklist.every((item) => item.passed);
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +122,13 @@ function SignupInner() {
 
   return (
     <div className="container-page section-padding flex items-center justify-center bg-background">
-      <div className="w-full max-w-md">
+      <motion.div
+        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        style={{ willChange: "opacity, transform" }}
+      >
         <Card className="glass-card elegant-shadow">
           <CardContent className="p-8 sm:p-10">
             <div className="mb-8 text-center">
@@ -283,7 +286,7 @@ function SignupInner() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

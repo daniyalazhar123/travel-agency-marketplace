@@ -3,6 +3,13 @@
 /**
  * Client-side session helpers (JWT in localStorage — demo-scope transport).
  * For production hardening, migrate to backend-set httpOnly cookies.
+ *
+ * "Remember me": when enabled, the session is mirrored to sessionStorage with
+ * a flag — closing the tab ends it (default). When disabled, the token lives
+ * only in memory for the tab (still localStorage for the active session so
+ * refreshes within the tab keep working, but cleared on tab close via the
+ * bootstrap below). Simpler + honest: default = persists, remember = persists
+ * across tabs (sessionStorage sync), opt-out = cleared on unload.
  */
 
 const TOKEN_KEY = "access_token";
@@ -18,16 +25,21 @@ export interface SessionUser {
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    // localStorage first (remembered), sessionStorage second (this tab only)
+    return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
   } catch {
     return null;
   }
 }
 
-export function setSession(token: string, user: SessionUser): void {
+export function setSession(token: string, user: SessionUser, remember = true): void {
   try {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    const store = remember ? localStorage : sessionStorage;
+    store.setItem(TOKEN_KEY, token);
+    store.setItem(USER_KEY, JSON.stringify(user));
+    // Always purge the other store so switching modes can't leave a ghost
+    (remember ? sessionStorage : localStorage).removeItem(TOKEN_KEY);
+    (remember ? sessionStorage : localStorage).removeItem(USER_KEY);
   } catch {
     // Storage blocked — session lives only in memory
   }
@@ -36,7 +48,8 @@ export function setSession(token: string, user: SessionUser): void {
 export function getSessionUser(): SessionUser | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(USER_KEY);
+    const raw =
+      localStorage.getItem(USER_KEY) ?? sessionStorage.getItem(USER_KEY);
     return raw ? (JSON.parse(raw) as SessionUser) : null;
   } catch {
     return null;
@@ -47,6 +60,8 @@ export function clearSession(): void {
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
   } catch {
     // ignore
   }

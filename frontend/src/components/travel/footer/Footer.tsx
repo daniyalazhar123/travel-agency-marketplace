@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Mail, MapPin, Phone, ArrowRight, Globe, MessageSquare, Users, Send, Monitor, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { type TenantConfig, type SocialLink } from "@/lib/tenant/config";
 
@@ -221,10 +222,24 @@ export function Footer({ tenant, currentTenantSlug }: FooterProps) {
               </button>
             </form>
             {state.status === "success" && (
-              <p role="status" aria-live="polite" className="flex items-start gap-2 text-sm text-white/90 mt-3">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-accent" aria-hidden="true" />
+              <motion.p
+                role="status"
+                aria-live="polite"
+                className="flex items-start gap-2 text-sm text-white/90 mt-3"
+                initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 320, damping: 22 }}
+              >
+                <motion.span
+                  className="mt-0.5 shrink-0 text-accent"
+                  initial={{ scale: 0, rotate: -30 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 16, delay: 0.08 }}
+                >
+                  <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                </motion.span>
                 {state.message}
-              </p>
+              </motion.p>
             )}
             {state.status === "error" && (
               <p role="alert" className="flex items-start gap-2 text-sm text-white/90 mt-3">
@@ -247,7 +262,7 @@ export function Footer({ tenant, currentTenantSlug }: FooterProps) {
                   <a
                     key={social.platform}
                     href={social.url}
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all duration-200"
+                    className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/70 transition-all duration-300 hover:-translate-y-1 hover:rotate-6 hover:bg-white/20 hover:text-white focus-visible:-translate-y-1 focus-visible:bg-white/20"
                     aria-label={social.label || social.platform}
                     target="_blank"
                     rel="noopener noreferrer"

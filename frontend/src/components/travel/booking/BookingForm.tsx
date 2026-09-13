@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, MapPin, Plane, Hotel, Compass, Search, Loader2, Shield, CheckCircle2, AlertCircle } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Calendar, MapPin, Plane, Hotel, Compass, Loader2, Shield, CheckCircle2, AlertCircle, CreditCard, RotateCcw, X, Minus, Plus } from "lucide-react";
+import { getToken } from "@/lib/session";
+
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
 
 const tabConfig = [
   { id: "experiences", label: "Experiences", icon: Compass },
@@ -31,6 +37,13 @@ interface ContactFields {
   phone: string;
 }
 
+interface PayableDestination {
+  id: string;
+  title: string;
+  price: number | null;
+  currency: string;
+}
+
 type Feedback =
   | { type: "success"; message: string; bookingId?: string }
   | { type: "error"; message: string; fieldErrors?: Record<string, string> }
@@ -42,12 +55,123 @@ const EMPTY_SEARCH: SearchParamsType = {
   flights: { origin: "", destination: "", departureDate: "", returnDate: "", passengers: "1", cabinClass: "Economy", directOnly: false },
 };
 
+/** localStorage draft key — per-tenant booking drafts. */
+const DRAFT_KEY_PREFIX = "booking_draft_";
+
+interface DraftPayload {
+  searchParams: SearchParamsType;
+  contact: ContactFields;
+  activeTab: string;
+  savedAt: number;
+}
+
+const DRAFT_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 3; // 3 days
+
+function loadDraft(tenant: string): DraftPayload | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY_PREFIX + tenant);
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as DraftPayload;
+    if (!draft?.savedAt || Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS) {
+      localStorage.removeItem(DRAFT_KEY_PREFIX + tenant);
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft(tenant: string): void {
+  try {
+    localStorage.removeItem(DRAFT_KEY_PREFIX + tenant);
+  } catch {
+    // ignore
+  }
+}
+
 export function BookingForm() {
-  const [activeTab, setActiveTab] = useState("experiences");
-  const [searchParams, setSearchParams] = useState<SearchParamsType>(EMPTY_SEARCH);
-  const [contact, setContact] = useState<ContactFields>({ fullName: "", email: "", phone: "" });
+  const pathname = usePathname();
+  // tenant is the first path segment ("/demo/booking" -> "demo")
+  const tenant = useMemo(() => pathname.split("/").filter(Boolean)[0] ?? "demo", [pathname]);
+
+  // Restore a saved draft (once, on mount) before wiring autosave
+  const [initialDraft] = useState(() => loadDraft(tenant));
+
+  const [activeTab, setActiveTab] = useState(initialDraft?.activeTab ?? "experiences");
+  const [searchParams, setSearchParams] = useState<SearchParamsType>(
+    initialDraft?.searchParams ?? EMPTY_SEARCH
+  );
+  const [contact, setContact] = useState<ContactFields>(
+    initialDraft?.contact ?? { fullName: "", email: "", phone: "" }
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+
+  // --- Stripe checkout state ---
+  const [payDestinations, setPayDestinations] = useState<PayableDestination[]>([]);
+  const [destinationsLoading, setDestinationsLoading] = useState(true);
+  const [payDestinationId, setPayDestinationId] = useState<string>("");
+  const [payTravelers, setPayTravelers] = useState<string>("1");
+  const [payDate, setPayDate] = useState<string>("");
+  const [isPaying, setIsPaying] = useState(false);
+
+  const selectedPayable = payDestinations.find((d) => d.id === payDestinationId);
+  const payTotal =
+    selectedPayable && selectedPayable.price != null
+      ? selectedPayable.price * Number(payTravelers)
+      : null;
+
+  // Fetch payable destinations (priced ones from the live DB)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${BACKEND_URL}/destinations?tenant_id=${encodeURIComponent(tenant)}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const rows = (await res.json()) as PayableDestination[];
+        if (!cancelled) {
+          setPayDestinations(rows.filter((r) => r.price != null));
+        }
+      } catch {
+        // Checkout silently unavailable; lead-gen form still works.
+      } finally {
+        if (!cancelled) setDestinationsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenant]);
+
+  // --- Draft autosave: debounce form state to localStorage (3-day TTL) ---
+  const hasDraft = initialDraft !== null;
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  useEffect(() => {
+    if (draftRestored) return;
+    if (hasDraft) setShowDraftBanner(true);
+    setDraftRestored(true);
+  }, [draftRestored, hasDraft]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          DRAFT_KEY_PREFIX + tenant,
+          JSON.stringify({ searchParams, contact, activeTab, savedAt: Date.now() } satisfies DraftPayload)
+        );
+      } catch {
+        // Storage blocked — drafts are a bonus, not a requirement
+      }
+    }, 600); // debounce
+    return () => clearTimeout(t);
+  }, [searchParams, contact, activeTab, tenant]);
 
   const updateSearchParam = (tab: keyof SearchParamsType, field: string, value: string | number | boolean) => {
     setSearchParams((prev) => {
@@ -132,6 +256,7 @@ export function BookingForm() {
         setFeedback({ type: "success", message: json.message ?? "Request received!", bookingId: json.bookingId });
         setSearchParams(EMPTY_SEARCH);
         setContact({ fullName: "", email: "", phone: "" });
+        clearDraft(tenant); // submitted — draft no longer needed
       } else {
         setFeedback({
           type: "error",
@@ -149,8 +274,108 @@ export function BookingForm() {
   const fieldError = (key: string) =>
     feedback?.type === "error" ? feedback.fieldErrors?.[key] : undefined;
 
+  /**
+   * Stripe Checkout: posts to our own /api/create-checkout-session proxy,
+   * which calls the FastAPI backend server-side (amounts are validated there,
+   * against the DB — never trusted from the client) and returns the Stripe
+   * hosted-checkout URL.
+   */
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isPaying) return;
+    setFeedback(null);
+
+    if (!payDestinationId) {
+      setFeedback({ type: "error", message: "Please choose a destination to book." });
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email)) {
+      setFeedback({
+        type: "error",
+        message: "Please fix the highlighted fields.",
+        fieldErrors: { email: "A valid email is required for your receipt." },
+      });
+      return;
+    }
+    if (payDate && !/^\d{4}-\d{2}-\d{2}$/.test(payDate)) {
+      setFeedback({ type: "error", message: "Travel date must be a valid date." });
+      return;
+    }
+
+    setIsPaying(true);
+    try {
+      // Forward the session JWT when present so the booking links to the
+      // account; guests simply omit it. The proxy passes it to the backend.
+      const token = getToken();
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          tenantId: tenant,
+          destinationId: payDestinationId,
+          email: contact.email.trim(),
+          travelers: Number(payTravelers),
+          startDate: payDate || "",
+          notes: contact.fullName ? `Booking for ${contact.fullName.trim()}` : "",
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { success?: boolean; url?: string; error?: string }
+        | null;
+
+      if (res.ok && json?.success && json.url) {
+        // Hand off to Stripe's hosted checkout
+        window.location.href = json.url;
+        return; // page navigates away
+      }
+
+      setFeedback({
+        type: "error",
+        message: json?.error ?? "Could not start checkout — please try again.",
+      });
+    } catch {
+      setFeedback({ type: "error", message: "Network error — please check your connection and try again." });
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   return (
     <Card className="glass-card max-w-5xl mx-auto">
+      {/* Draft-restored banner (dismissable) */}
+      {showDraftBanner && (
+        <div className="flex items-center justify-between gap-3 rounded-t-xl border-b border-accent/20 bg-accent/5 px-6 py-3">
+          <p className="flex items-center gap-2 text-sm text-foreground" role="status">
+            <RotateCcw className="h-4 w-4 text-accent" aria-hidden="true" />
+            We restored your saved draft — pick up right where you left off.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                clearDraft(tenant);
+                setSearchParams(EMPTY_SEARCH);
+                setContact({ fullName: "", email: "", phone: "" });
+                setShowDraftBanner(false);
+              }}
+              className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              Start fresh
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDraftBanner(false)}
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+              aria-label="Dismiss draft notice"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
       <CardHeader className="pb-4">
         <CardTitle className="heading-card">Plan Your Journey</CardTitle>
         <CardDescription className="body-base">
@@ -462,7 +687,124 @@ export function BookingForm() {
               </div>
             </div>
 
-            <Button type="submit" className="btn-primary w-full sm:w-auto px-10 py-4 text-lg" disabled={isSubmitting}>
+            {/* Payment section — instant booking on priced destinations */}
+          {!destinationsLoading && payDestinations.length > 0 && (
+            <div className="border-t border-border pt-6 space-y-6">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-accent" aria-hidden="true" />
+                <h3 className="heading-card text-foreground">Or Book &amp; Pay Instantly</h3>
+              </div>
+              <p className="text-sm text-muted-foreground -mt-3">
+                Secure checkout via Stripe — your booking is confirmed the moment payment completes.
+              </p>
+
+              <form onSubmit={handleCheckout} className="space-y-4 rounded-xl border border-border bg-muted/20 p-4" noValidate>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-2 lg:col-span-2">
+                    <Label htmlFor="pay-destination">Destination</Label>
+                    <Select value={payDestinationId} onValueChange={(v) => setPayDestinationId(v ?? "")}>
+                      <SelectTrigger id="pay-destination">
+                        <SelectValue placeholder="Choose a destination" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {payDestinations.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.title} {d.price != null ? `(${d.currency} ${d.price.toLocaleString()})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label id="pay-travelers-label" htmlFor="pay-travelers-btns">
+                      Travelers
+                    </Label>
+                    <div
+                      id="pay-travelers-btns"
+                      role="group"
+                      aria-labelledby="pay-travelers-label"
+                      className="flex h-10 items-center justify-between rounded-md border border-input bg-transparent px-2"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setPayTravelers((t) => String(Math.max(1, Number(t) - 1)))}
+                        disabled={isPaying || payTravelers === "1"}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-foreground transition-all hover:bg-muted active:scale-90 disabled:opacity-40 disabled:hover:bg-transparent"
+                        aria-label="Remove one traveler"
+                      >
+                        <Minus className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        <motion.span
+                          key={payTravelers}
+                          className="min-w-6 text-center text-sm font-medium text-foreground"
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.6 }}
+                          transition={{ duration: 0.18 }}
+                          aria-live="polite"
+                        >
+                          {payTravelers}
+                        </motion.span>
+                      </AnimatePresence>
+                      <button
+                        type="button"
+                        onClick={() => setPayTravelers((t) => String(Math.min(6, Number(t) + 1)))}
+                        disabled={isPaying || payTravelers === "6"}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-foreground transition-all hover:bg-muted active:scale-90 disabled:opacity-40 disabled:hover:bg-transparent"
+                        aria-label="Add one traveler"
+                      >
+                        <Plus className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pay-date">Travel Date</Label>
+                    <Input
+                      id="pay-date"
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      disabled={isPaying}
+                    />
+                  </div>
+                </div>
+
+                {payTotal != null && selectedPayable && (
+                  <div className="flex items-center justify-between rounded-lg bg-accent/5 border border-accent/20 px-4 py-3">
+                    <span className="text-sm font-medium text-foreground">
+                      Total ({payTravelers} traveler{Number(payTravelers) > 1 ? "s" : ""})
+                    </span>
+                    <span className="font-display text-lg font-medium text-accent">
+                      {selectedPayable.currency} {payTotal.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="btn-accent w-full sm:w-auto px-8 py-3.5"
+                  disabled={isPaying || !payDestinationId}
+                >
+                  {isPaying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
+                      Redirecting to Secure Checkout...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" aria-hidden="true" />
+                      Book &amp; Pay Now
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+          )}
+
+          <Button type="submit" className="btn-primary btn-shimmer w-full sm:w-auto px-10 py-4 text-lg" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />

@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AuthGuard } from "@/components/ui/AuthGuard";
-import { getToken } from "@/lib/session";
+import { clearSession, getToken } from "@/lib/session";
+import { useRouter } from "next/navigation";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
@@ -37,6 +37,13 @@ const EMPTY_FORM = { title: "", price: "", currency: "USD", image_url: "", descr
 function AdminDestinationsInner() {
   const params = useParams<{ tenant: string }>();
   const tenant = params.tenant ?? "demo";
+  const router = useRouter();
+
+  /** Session died mid-action (401): clear it and bounce to /login?next=this page. */
+  const handleSessionExpired = useCallback(() => {
+    clearSession();
+    router.replace(`/login?next=${encodeURIComponent(`/${tenant}/admin/destinations`)}`);
+  }, [router, tenant]);
 
   const [items, setItems] = useState<DestinationRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +118,8 @@ function AdminDestinationsInner() {
         setForm(EMPTY_FORM);
         await load();
       } else if (res.status === 401) {
-        setFeedback({ type: "error", message: "Your session expired — signing you out." });
+        setFeedback({ type: "error", message: "Your session expired — redirecting to sign in..." });
+        handleSessionExpired();
       } else {
         const detail = json?.detail;
         const msg = typeof detail === "string" ? detail : (detail as { detail?: string })?.detail;
@@ -137,7 +145,8 @@ function AdminDestinationsInner() {
         setFeedback({ type: "success", message: "Destination deleted." });
         await load();
       } else if (res.status === 401) {
-        setFeedback({ type: "error", message: "Your session expired — signing you out." });
+        setFeedback({ type: "error", message: "Your session expired — redirecting to sign in..." });
+        handleSessionExpired();
       } else {
         setFeedback({ type: "error", message: "Could not delete destination." });
       }
@@ -340,9 +349,5 @@ function AdminDestinationsInner() {
 }
 
 export default function AdminDestinationsPage() {
-  return (
-    <AuthGuard>
-      <AdminDestinationsInner />
-    </AuthGuard>
-  );
+  return <AdminDestinationsInner />;
 }

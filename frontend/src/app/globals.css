@@ -645,6 +645,134 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+/* --- Premium micro-interaction utilities (Phase 2) --- */
+
+/* Shimmer sweep on primary/accent buttons */
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(250%) skewX(-12deg); }
+}
+
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.btn-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.btn-shimmer:hover::after,
+.btn-shimmer:focus-visible::after {
+  opacity: 1;
+  animation: shimmer-sweep 0.9s var(--easing-ease);
+}
+
+/* Gradient border-lift for premium cards (glassmorphism + elevation) */
+.card-gradient-lift {
+  position: relative;
+  background-image: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.01)
+  );
+  transition: transform 0.35s var(--easing-ease), box-shadow 0.35s var(--easing-ease);
+  will-change: transform;
+}
+
+.card-gradient-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-gradient-lift:hover {
+    transform: none;
+    box-shadow: var(--shadow-elegant);
+  }
+}
+
+/* Animated price badge pulse (subtle, reduced-motion safe) */
+@keyframes price-badge-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.price-badge-animate {
+  display: inline-block;
+}
+
+.price-badge-animate:hover {
+  animation: price-badge-pop 0.45s var(--easing-spring);
+}
+
+/* Floating-label form fields (21st.dev style) */
+.field-float {
+  position: relative;
+}
+
+.field-float input,
+.field-float select,
+.field-float textarea {
+  transition: border-color 0.2s var(--easing-ease), box-shadow 0.2s var(--easing-ease);
+}
+
+/* Typing indicator dots */
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: typing-dot 1.2s infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot {
+    animation: none;
+    opacity: 0.7;
+  }
+  .btn-shimmer::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Confetti burst (booking success) — driven by inline custom props */
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), 65vh, 0) rotate(var(--rotate, 360deg));
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-slide-up,

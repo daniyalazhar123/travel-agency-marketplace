@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant, Montserrat } from "next/font/google";
 import "./globals.css";
 import { CookieBanner } from "@/components/ui/CookieBanner";
+import { SmoothScroll } from "@/lib/smooth-scroll";
 
 const cormorant = Cormorant({
   subsets: ["latin"],
@@ -90,6 +91,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
       <body className="font-body antialiased">
+        <SmoothScroll />
         {children}
         <CookieBanner />
       </body>

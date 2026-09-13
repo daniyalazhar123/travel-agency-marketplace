@@ -6,7 +6,7 @@ verified), and enforces the tenant scope claim.
 import uuid
 from typing import Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    """Require a valid access JWT. Raises 401 if missing/invalid/unverified."""
     if credentials is None or credentials.scheme.lower() != "bearer" or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -79,6 +80,39 @@ def require_role(*roles: UserRole):
         return user
 
     return checker
+
+
+async def get_optional_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Return the user if a valid JWT is attached; None for guests.
+
+    Unlike get_current_user this NEVER raises 401 — use it for endpoints
+    that serve both authenticated and anonymous traffic (e.g. checkout).
+    """
+    auth = request.headers.get("Authorization", "")
+    if not auth.lower().startswith("bearer "):
+        return None
+    token = auth.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    try:
+        claims = decode_token(token, expected_type=TOKEN_TYPE_ACCESS)
+    except Exception:  # noqa: BLE001 - invalid/expired -> treat as guest
+        return None
+    user_id = claims.get("sub")
+    if not user_id:
+        return None
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        return None
+    result = await db.execute(select(User).where(User.id == user_uuid))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active or not user.is_email_verified:
+        return None
+    return user
 
 
 def user_claims(user: User) -> dict[str, Any]:

@@ -78,6 +78,7 @@ class User(TimestampMixin, Base):
 
 class BookingStatus(str, enum.Enum):
     pending = "pending"        # created, awaiting confirmation
+    paid = "paid"              # payment captured via Stripe checkout
     confirmed = "confirmed"
     cancelled = "cancelled"
     completed = "completed"

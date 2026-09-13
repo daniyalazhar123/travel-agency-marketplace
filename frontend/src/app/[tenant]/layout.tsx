@@ -2,6 +2,8 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTenantConfig, getAllTenantIds } from "@/lib/tenant/config";
 import { Navigation } from "@/components/travel/navigation/Navigation";
+import { VoiceAgent } from "@/components/ui/VoiceAgent";
+import { ChatConcierge } from "@/components/travel/chat/ChatConcierge";
 
 interface TenantPageProps {
   params: Promise<{ tenant: string }>;
@@ -47,6 +49,8 @@ export default async function TenantLayout({ params, children }: TenantLayoutPro
       <main id="main-content" className="pt-20 lg:pt-24">
         {children}
       </main>
+      <VoiceAgent />
+      <ChatConcierge tenantSlug={resolvedParams.tenant} tenantName={tenant.name} />
     </div>
   );
 }

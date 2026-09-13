@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Loader2, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { clearSession, getToken, validateToken } from "@/lib/session";
 
 interface AuthGuardProps {
@@ -59,12 +59,23 @@ export function AuthGuard({ children, redirectTo }: AuthGuardProps) {
   }, [router, target]);
 
   if (state === "checking") {
+    // Loading skeleton — mirrors the real page shape so there is no
+    // flash-of-unauthenticated-content; purely decorative shimmer.
     return (
-      <div className="container-page section-padding flex flex-col items-center justify-center gap-4 min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" aria-hidden="true" />
-        <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
-          Checking your session...
-        </p>
+      <div className="container-page section-padding min-h-[60vh]" aria-busy="true" aria-live="polite">
+        <div className="mx-auto max-w-4xl space-y-8">
+          <div className="flex flex-col items-center gap-3">
+            {/* Visually hidden status for screen readers */}
+            <span className="sr-only" role="status">Checking your session...</span>
+            <div className="h-10 w-64 animate-pulse rounded-lg bg-muted" />
+            <div className="h-4 w-96 max-w-full animate-pulse rounded-md bg-muted/70" />
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="h-48 animate-pulse rounded-2xl bg-muted/60" />
+            <div className="h-48 animate-pulse rounded-2xl bg-muted/60" />
+          </div>
+          <div className="h-32 animate-pulse rounded-2xl bg-muted/40" />
+        </div>
       </div>
     );
   }

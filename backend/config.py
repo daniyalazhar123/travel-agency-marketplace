@@ -69,6 +69,11 @@ class Settings(BaseSettings):
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     cohere_api_key: str = Field(default="", alias="COHERE_API_KEY")
 
+    # --- Stripe payments ---
+    stripe_secret_key: str = Field(default="", alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: str = Field(default="", alias="STRIPE_WEBHOOK_SECRET")
+    stripe_currency: str = Field(default="USD", alias="STRIPE_CURRENCY")
+
     @property
     def async_database_url(self) -> str:
         """Convert the libpq-style DATABASE_URL to an asyncpg-ready URL."""

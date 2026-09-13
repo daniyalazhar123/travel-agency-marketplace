@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import { getTenantConfig } from "@/lib/tenant/config";
 import { Footer } from "@/components/travel/footer/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Users, Globe, Star, Shield, Leaf, Heart, ArrowRight, Award, Sparkles } from "lucide-react";
+import { buttonLinkClass } from "@/lib/button-link";
+import { Globe, Shield, Leaf, Heart, ArrowRight, Award, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 interface TenantPageProps {
@@ -124,17 +124,19 @@ export default async function TenantAboutPage({ params }: TenantPageProps) {
                 {tenant.description || "Founded on the belief that travel should transform, not just transport. We curate extraordinary journeys for those who seek the exceptional."}
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <Button variant="secondary" className="border-white/30 text-white hover:bg-white/10 px-8 py-3" asChild>
-                  <Link href={`/${resolvedParams.tenant}/contact`}>
-                    Start Your Journey
-                    <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
-                  </Link>
-                </Button>
-                <Button variant="ghost" className="text-white hover:bg-white/10 px-8 py-3" asChild>
-                  <Link href={`/${resolvedParams.tenant}/explore`}>
-                    View Destinations
-                  </Link>
-                </Button>
+                <Link
+                  href={`/${resolvedParams.tenant}/contact`}
+                  className={buttonLinkClass("secondary", "border-white/30 text-white hover:bg-white/10 px-8 py-3")}
+                >
+                  Start Your Journey
+                  <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
+                </Link>
+                <Link
+                  href={`/${resolvedParams.tenant}/explore`}
+                  className={buttonLinkClass("ghost", "text-white hover:bg-white/10 px-8 py-3")}
+                >
+                  View Destinations
+                </Link>
               </div>
             </div>
           </div>
@@ -227,17 +229,19 @@ export default async function TenantAboutPage({ params }: TenantPageProps) {
               Let's start the conversation.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="px-10 py-4" asChild>
-                <Link href={`/${resolvedParams.tenant}/contact`}>
-                  Plan Your Trip
-                  <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
-                </Link>
-              </Button>
-              <Button variant="secondary" size="lg" className="px-10 py-4" asChild>
-                <Link href={`/${resolvedParams.tenant}/explore`}>
-                  Browse Destinations
-                </Link>
-              </Button>
+              <Link
+                href={`/${resolvedParams.tenant}/contact`}
+                className={buttonLinkClass("default", "px-10 py-4")}
+              >
+                Plan Your Trip
+                <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
+              </Link>
+              <Link
+                href={`/${resolvedParams.tenant}/explore`}
+                className={buttonLinkClass("secondary", "px-10 py-4")}
+              >
+                Browse Destinations
+              </Link>
             </div>
           </div>
         </section>

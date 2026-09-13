@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getTenantConfig } from "@/lib/tenant/config";
 import { Footer } from "@/components/travel/footer/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonLinkClass } from "@/lib/button-link";
 import { Users, Compass, Shield, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { BookingForm } from "@/components/travel/booking/BookingForm";
@@ -100,17 +100,19 @@ export default async function TenantBookingPage({ params }: TenantPageProps) {
                 Schedule a complimentary consultation and let us design your perfect journey together.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Button size="lg" className="px-10 py-4" asChild>
-                  <Link href={`/${resolvedParams.tenant}/contact`}>
-                    Schedule Consultation
-                    <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
-                  </Link>
-                </Button>
-                <Button variant="secondary" size="lg" className="px-10 py-4" asChild>
-                  <Link href={`/${resolvedParams.tenant}/explore`}>
-                    Browse Experiences
-                  </Link>
-                </Button>
+                <Link
+                  href={`/${resolvedParams.tenant}/contact`}
+                  className={buttonLinkClass("default", "px-10 py-4")}
+                >
+                  Schedule Consultation
+                  <ArrowRight className="w-5 h-5 ml-2" aria-hidden="true" />
+                </Link>
+                <Link
+                  href={`/${resolvedParams.tenant}/explore`}
+                  className={buttonLinkClass("secondary", "px-10 py-4")}
+                >
+                  Browse Experiences
+                </Link>
               </div>
             </div>
           </section>

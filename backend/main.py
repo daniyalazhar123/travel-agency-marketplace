@@ -15,7 +15,9 @@ from config import get_settings
 from database import check_db_connection, dispose_engine
 from mailer import send_email as _noop_check  # noqa: F401 — import sanity at startup
 from routers.auth import router as auth_router
+from routers.chat import router as chat_router
 from routers.destinations import router as destinations_router
+from routers.payments import router as payments_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,6 +55,14 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("⚠️  GROQ_API_KEY not set — AI features disabled until configured")
 
+    # --- Stripe check ---
+    if settings.stripe_secret_key:
+        logger.info("✅ STRIPE_SECRET_KEY configured — Stripe checkout active")
+        if not settings.stripe_webhook_secret:
+            logger.warning("⚠️  STRIPE_WEBHOOK_SECRET not set — webhooks cannot be verified (dev only)")
+    else:
+        logger.warning("⚠️  STRIPE_SECRET_KEY not set — payment endpoints return 503")
+
     if settings.is_production and not settings.jwt_secret.startswith("change-me") is False:
         pass  # explicit check below
 
@@ -86,6 +96,8 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(destinations_router)
+app.include_router(payments_router)
+app.include_router(chat_router)
 
 
 @app.get("/health", tags=["system"])

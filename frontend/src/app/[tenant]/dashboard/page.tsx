@@ -1,11 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getTenantConfig } from "@/lib/tenant/config";
 import { Footer } from "@/components/travel/footer/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AuthGuard } from "@/components/ui/AuthGuard";
 import { Plus, Users, MapPin, BarChart3, Calendar, ArrowRight } from "lucide-react";
 
 interface TenantPageProps {
@@ -64,7 +62,6 @@ export default async function TenantDashboardPage({ params }: TenantPageProps) {
   ];
 
   return (
-    <AuthGuard redirectTo={`/${resolvedParams.tenant}/dashboard`}>
     <div className="min-h-screen bg-background">
       <main className="pb-16">
         <div className="container-page">
@@ -172,6 +169,5 @@ export default async function TenantDashboardPage({ params }: TenantPageProps) {
         <Footer tenant={tenant} currentTenantSlug={resolvedParams.tenant} />
       </main>
     </div>
-    </AuthGuard>
   );
 }

@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn, Loader2, AlertCircle, Eye, EyeOff, Mail } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ function LoginInner() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,12 +59,16 @@ function LoginInner() {
         | null;
 
       if (res.ok && json?.access_token) {
-        setSession(json.access_token, {
-          id: json.user_id ?? "",
-          email: email.trim(),
-          role: json.role ?? "customer",
-          tenant_id: json.tenant_id ?? DEFAULT_TENANT,
-        });
+        setSession(
+          json.access_token,
+          {
+            id: json.user_id ?? "",
+            email: email.trim(),
+            role: json.role ?? "customer",
+            tenant_id: json.tenant_id ?? DEFAULT_TENANT,
+          },
+          remember
+        );
         router.push(safeNext);
       } else if (res.status === 403) {
         setError(
@@ -85,7 +91,13 @@ function LoginInner() {
 
   return (
     <div className="container-page section-padding flex items-center justify-center bg-background">
-      <div className="w-full max-w-md">
+      <motion.div
+        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        style={{ willChange: "opacity, transform" }}
+      >
         <Card className="glass-card elegant-shadow">
           <CardContent className="p-8 sm:p-10">
             <div className="mb-8 text-center">
@@ -162,6 +174,19 @@ function LoginInner() {
                 </p>
               )}
 
+              <div className="flex items-center justify-between">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
+                    aria-label="Remember me on this device"
+                  />
+                  Remember me
+                </label>
+              </div>
+
               <Button
                 type="submit"
                 className="btn-primary w-full py-3.5"
@@ -195,7 +220,7 @@ function LoginInner() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

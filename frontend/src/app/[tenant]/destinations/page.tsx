@@ -2,7 +2,11 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTenantConfig } from "@/lib/tenant/config";
 import { Footer } from "@/components/travel/footer/Footer";
-import { MapPin, Star, ArrowRight } from "lucide-react";
+import { DestinationCard, type DestinationCardData } from "@/components/travel/destinations/DestinationCard";
+import { isStripeBookableId } from "@/lib/tenant/bookable";
+import { StaggerGrid, FadeUp, fadeUpVariants } from "@/lib/motion-primitives";
+import { motion } from "framer-motion";
+import { MapPin, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface TenantPageProps {
@@ -10,15 +14,7 @@ interface TenantPageProps {
   searchParams: Promise<{ category?: string; featured?: string }>;
 }
 
-interface PublicDestination {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  price?: number;
-  currency?: string;
-  category?: string;
-  rating?: number;
+interface PublicDestination extends DestinationCardData {
   featured?: boolean;
   location?: { city?: string; country?: string };
 }
@@ -96,32 +92,18 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
     ? destinations.filter((d) => d.category === selectedCategory)
     : destinations;
 
-  const formatPrice = (price?: number, currency = "USD") => {
-    if (!price) return "Contact for pricing";
-    try {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(price);
-    } catch {
-      return `${currency} ${price.toLocaleString()}`;
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <main className="pb-16">
         <div className="container-page">
-          <div className="max-w-3xl mx-auto text-center mb-16 lg:mb-20">
+          <FadeUp className="max-w-3xl mx-auto text-center mb-16 lg:mb-20">
             <span className="label text-accent mb-4 inline-block">Our World</span>
             <h1 className="heading-section text-foreground mb-4">Extraordinary Destinations</h1>
             <p className="body-lg text-balance">
               Hand-selected locations that define luxury travel. Each destination offers
               unique experiences, exceptional accommodations, and unforgettable moments.
             </p>
-          </div>
+          </FadeUp>
 
           {categories.length > 0 && (
             <div className="mb-10">
@@ -134,7 +116,7 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
             </div>
           )}
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+          <StaggerGrid className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
             {filteredDestinations.length === 0 ? (
               <div className="col-span-full text-center py-16">
                 <MapPin className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" aria-hidden="true" />
@@ -153,69 +135,26 @@ export default async function TenantDestinationsPage({ params, searchParams }: T
               </div>
             ) : (
               filteredDestinations.map((destination) => (
-                <div
-                  key={destination.id}
-                  className="group glass-card overflow-hidden aspect-[4/3] elegant-shadow-hover flex flex-col"
-                >
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    {destination.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- remote admin-provided URLs
-                      <img
-                        src={destination.image}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/20 flex items-center justify-center">
-                        <MapPin className="w-10 h-10 text-muted-foreground/40" aria-hidden="true" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" aria-hidden="true" />
-                    {destination.category && (
-                      <div className="absolute bottom-4 left-4">
-                        <span className="px-3 py-1.5 rounded-full bg-white/90 text-primary text-xs font-medium backdrop-blur-sm">
-                          {destination.category}
-                        </span>
-                      </div>
-                    )}
-                    {destination.rating && (
-                      <div className="absolute bottom-4 right-4 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/90 text-primary text-xs font-medium backdrop-blur-sm">
-                        <Star className="w-3 h-3 fill-current text-accent" aria-hidden="true" />
-                        <span>{destination.rating.toFixed(1)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6 flex flex-col flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="heading-card text-foreground">{destination.name}</h3>
-                      {destination.price != null && (
-                        <span className="text-accent font-display font-medium text-lg whitespace-nowrap">
-                          {formatPrice(destination.price, destination.currency)}
-                        </span>
-                      )}
-                    </div>
-                    {destination.location?.country && (
-                      <p className="flex items-center gap-1 text-muted-foreground text-sm mb-3">
-                        <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
-                        {destination.location.city ? `${destination.location.city}, ` : ""}{destination.location.country}
-                      </p>
-                    )}
-                    <p className="text-muted-foreground text-sm mb-4 flex-1 line-clamp-2">{destination.description}</p>
-                    <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                      <Link
-                        href={`/${resolvedParams.tenant}/booking`}
-                        className="text-sm font-medium text-foreground hover:text-accent transition-colors"
-                      >
-                        Plan a Journey
-                      </Link>
-                      <ArrowRight className="w-4 h-4 text-accent group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-                    </div>
-                  </div>
-                </div>
+                <motion.div key={destination.id} variants={fadeUpVariants}>
+                  <DestinationCard
+                    destination={{
+                      id: destination.id,
+                      name: destination.name,
+                      description: destination.description,
+                      image: destination.image,
+                      price: destination.price,
+                      currency: destination.currency,
+                      category: destination.category,
+                      rating: destination.rating,
+                      country: destination.location?.country,
+                    }}
+                    tenant={resolvedParams.tenant}
+                    isBookable={isStripeBookableId(destination.id, destination.price)}
+                  />
+                </motion.div>
               ))
             )}
-          </div>
+          </StaggerGrid>
 
           {filteredDestinations.length > 0 && !selectedCategory && featuredDestinations.length > 0 && (
             <div className="mt-16 lg:mt-20 text-center">
