@@ -63,9 +63,6 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("⚠️  STRIPE_SECRET_KEY not set — payment endpoints return 503")
 
-    if settings.is_production and not settings.jwt_secret.startswith("change-me") is False:
-        pass  # explicit check below
-
     if settings.is_production and settings.jwt_secret == "change-me-in-production":
         logger.error("❌ JWT_SECRET is still the default — refusing to run in production")
         raise RuntimeError("Set a strong JWT_SECRET before running in production")
