@@ -91,6 +91,8 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
       <body className="font-body antialiased">
+        {/* Premium scroll engine: Lenis inertia + GSAP ScrollTrigger.
+            Client-only, renders nothing — see src/lib/smooth-scroll.tsx */}
         <SmoothScroll />
         {children}
         <CookieBanner />

@@ -152,6 +152,73 @@ def decode_token(
     return payload
 
 
+from fastapi import Response
+
+# --- Cookie-based auth helpers ---
+
+COOKIE_NAME = "auth_token"
+COOKIE_MAX_AGE = 30 * 60  # 30 minutes (matches access token expiry)
+REFRESH_COOKIE_NAME = "refresh_token"
+REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days
+
+
+def set_auth_cookies(
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+    is_production: bool = False,
+) -> None:
+    """Set HttpOnly, Secure, SameSite=lax auth cookies on the response."""
+    secure = is_production
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=access_token,
+        max_age=COOKIE_MAX_AGE,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=REFRESH_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
+
+
+def clear_auth_cookies(response: Response, is_production: bool = False) -> None:
+    """Clear auth cookies on logout."""
+    secure = is_production
+    response.delete_cookie(COOKIE_NAME, path="/", secure=secure, samesite="lax", httponly=True)
+    response.delete_cookie(REFRESH_COOKIE_NAME, path="/", secure=secure, samesite="lax", httponly=True)
+
+
+def get_access_token_from_cookie(cookie_header: str | None) -> str | None:
+    """Extract access token from Cookie header."""
+    if not cookie_header:
+        return None
+    for cookie in cookie_header.split(";"):
+        cookie = cookie.strip()
+        if cookie.startswith(f"{COOKIE_NAME}="):
+            return cookie[len(COOKIE_NAME) + 1 :]
+    return None
+
+
+def get_refresh_token_from_cookie(cookie_header: str | None) -> str | None:
+    """Extract refresh token from Cookie header."""
+    if not cookie_header:
+        return None
+    for cookie in cookie_header.split(";"):
+        cookie = cookie.strip()
+        if cookie.startswith(f"{REFRESH_COOKIE_NAME}="):
+            return cookie[len(REFRESH_COOKIE_NAME) + 1 :]
+    return None
+
+
 __all__ = [
     "validate_password",
     "hash_password",
@@ -162,4 +229,10 @@ __all__ = [
     "decode_email_verification_token",
     "decode_token",
     "JWTError",
+    "set_auth_cookies",
+    "clear_auth_cookies",
+    "get_access_token_from_cookie",
+    "get_refresh_token_from_cookie",
+    "COOKIE_NAME",
+    "REFRESH_COOKIE_NAME",
 ]

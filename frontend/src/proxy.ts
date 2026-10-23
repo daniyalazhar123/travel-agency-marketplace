@@ -1,39 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Next.js 16 proxy convention (replaces deprecated middleware.ts).
-// Runs in Edge runtime before any page rendering.
+/**
+ * Secure proxy wrapper — ensures HttpOnly cookies are sent on all proxied requests.
+ * Removes the dangerous auto-redirect to /demo tenant that bypassed authentication.
+ */
 
-const DEFAULT_TENANT = "demo";
-
-const TENANT_SCOPED_ROUTES = [
-  "/explore",
-  "/destinations",
-  "/experiences",
-  "/booking",
-  "/about",
-  "/contact",
-  "/journal",
-  "/dashboard",
-  "/newsletter",
-  "/privacy",
-  "/terms",
-  "/cookies",
-  "/accessibility",
-];
+// Protected routes require auth_token cookie (HttpOnly, Secure, SameSite="lax")
+const PROTECTED_PATHS = ["/dashboard", "/admin", "/booking"];
+const AUTH_COOKIE = "auth_token";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // ---------------------------------------------------------------
-  // ROOT -> DEFAULT TENANT
-  // Pure server-side HTTP 307 redirect, executed in Edge runtime
-  // BEFORE any page rendering — no client-side navigation, no FOUC.
-  // Must run first, above every other rule.
-  // ---------------------------------------------------------------
-  if (pathname === "/" || pathname === "") {
-    return NextResponse.redirect(new URL(`/${DEFAULT_TENANT}`, request.url), 307);
-  }
 
   // Skip static assets / API / internal Next.js paths
   if (
@@ -41,30 +19,33 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/api") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/og-image") ||
-    pathname.startsWith("/apple-touch-icon") ||
-    pathname.startsWith("/site.webmanifest")
+    pathname.startsWith("/apple-touch-icon")
   ) {
     return NextResponse.next();
   }
 
-  // Check if path matches a tenant-scoped route WITHOUT a tenant prefix
-  const isTenantScopedRoute = TENANT_SCOPED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
+  // Check for auth_token cookie (HttpOnly, Secure, SameSite="lax")
+  const authCookie = request.cookies.get(AUTH_COOKIE);
+  const hasAuthToken = !!authCookie?.value;
 
-  if (isTenantScopedRoute) {
-    // Redirect /explore -> /demo/explore
-    const url = request.nextUrl.clone();
-    url.pathname = `/${DEFAULT_TENANT}${pathname}`;
-    return NextResponse.redirect(url);
+  // Block protected routes if cookie is missing — NO redirect to /demo
+  for (const protectedPath of PROTECTED_PATHS) {
+    if (pathname === protectedPath || pathname.startsWith(protectedPath + "/")) {
+      if (!hasAuthToken) {
+        const url = new URL("/login", request.url);
+        url.searchParams.set("next", pathname);
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
+  // No more auto-redirect to /demo tenant — tenant resolution
+  // must come from authenticated session, not URL path manipulation
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    // Match all paths (incl. /) except static files and internals
     "/((?!_next/static|_next/image|favicon.ico|og-image.jpg|site.webmanifest).*)",
   ],
 };

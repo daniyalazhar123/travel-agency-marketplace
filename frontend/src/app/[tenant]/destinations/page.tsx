@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: TenantPageProps): Promise<Met
  * Returns null on any failure so the caller can fall back to config data.
  */
 async function fetchApiDestinations(tenantId: string): Promise<PublicDestination[] | null> {
-  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "https://8d037e55-ee42-46aa-9371-a36de024c7dd-00-2m01srlp9rho5.pike.replit.dev";
   try {
     const res = await fetch(`${base}/destinations?tenant_id=${encodeURIComponent(tenantId)}`, {
       next: { revalidate: 60 }, // ISR: refresh every minute

@@ -127,6 +127,8 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     return {"message": "Account created and active."}
 
 
+from fastapi import Response
+
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> Any:
     result = await db.execute(
@@ -150,14 +152,23 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> An
     user.last_login_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
     await db.flush()
 
-    return TokenResponse(
-        access_token=create_access_token(user.id, user.tenant_id, user.role),
-        refresh_token=create_refresh_token(user.id, user.tenant_id),
+    # Create and set the JWT cookie
+    auth_token = create_access_token(user.id, user.tenant_id, user.role)
+    refresh_token = create_refresh_token(user.id, user.tenant_id)
+    
+    response = TokenResponse(
+        access_token=auth_token,
+        refresh_token=refresh_token,
         user_id=str(user.id),
         email=user.email,
         role=user.role.value,
         tenant_id=user.tenant_id,
     )
+    
+    # Set the auth_token cookie with HttpOnly, Secure, SameSite="lax" attributes
+    set_auth_cookies(response, auth_token, refresh_token, user.is_production)
+    
+    return response
 
 
 @router.get("/verify-email")

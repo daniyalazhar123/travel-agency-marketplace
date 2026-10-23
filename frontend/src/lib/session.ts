@@ -72,7 +72,7 @@ export function clearSession(): void {
  * Returns the session user, or null if token is invalid/expired.
  */
 export async function validateToken(token: string): Promise<SessionUser | null> {
-  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "http://127.0.0.1:8000";
+  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") || "https://8d037e55-ee42-46aa-9371-a36de024c7dd-00-2m01srlp9rho5.pike.replit.dev";
   try {
     const res = await fetch(`${base}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
